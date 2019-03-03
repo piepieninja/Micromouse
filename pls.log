@@ -1,0 +1,25 @@
+can not find channel named "sock2059af0"
+can not find channel named "sock2059af0"
+    while executing
+"puts -nonewline $channel $msg$name$name_pad"
+    (procedure "sendNodeAddMessage" line 73)
+    invoked from within
+"sendNodeAddMessage $sock $node"
+    (procedure "deployCfgAPI" line 60)
+    invoked from within
+"deployCfgAPI $emul_sock"
+    (procedure "setOperMode" line 56)
+    invoked from within
+"setOperMode $mode"
+    (procedure "startStopButton" line 28)
+    invoked from within
+"startStopButton exec"
+    invoked from within
+".left.start invoke"
+    ("uplevel" body line 1)
+    invoked from within
+"uplevel #0 [list $w $cmd]"
+    (procedure "tk::CheckRadioInvoke" line 3)
+    invoked from within
+"tk::CheckRadioInvoke .left.start"
+    (command bound to event)
