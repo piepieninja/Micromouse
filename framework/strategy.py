@@ -299,20 +299,25 @@ class Node(object):
 				c.get_leaves(stack)
 		return stack
 
-	def get_path(self, goal):
-		stack = []
-		stack.append(self)
-		while (len(stack) > 0):
-			parent = stack.pop()
-			if (parent.x == goal.x and parent.y == goal.y):
-				# stack.append(parent)
-				parent.path_to_me.append([parent.x,parent.y])
-				return stack
-			for c in parent.get_children():
-				c.path_to_me.append([parent.x,parent.y])
-				c.get_children()
-		return stack
-
+	def get_path(self, root, goal):
+		if not root:
+			return []
+		if (root.x == goal[0] and root.y == goal[1]):
+			return [root.get_loc()]
+		# clockwise, becasue why not
+		returned = self.get_path(root.up,goal)
+		if returned:
+			return [root.get_loc()] + returned
+		returned = self.get_path(root.right,goal)
+		if returned:
+			return [root.get_loc()] + returned
+		returned = self.get_path(root.down,goal)
+		if returned:
+			return [root.get_loc()] + returned
+		returned = self.get_path(root.left,goal)
+		if returned:
+			return [root.get_loc()] + returned
+		return []
 
 #
 # Finds the node n, or returns None
@@ -657,32 +662,17 @@ class Rendezvous(Strategy):
 					h_val = heuristic_dist(t_loc,self.center)
 			self.has_goal = True
 			logthis("Goal: " + str(self.curr_goal.x) + ", " +str(self.curr_goal.y))
-			# now get the path to that goal!
 
-			logthis("curr path: ")
-			for node in self.curr_goal.path_to_me:
-				p_str += str(node[0]) + ", " + str(node[1]) + " -> "
+			root_partial = self.root.get_path(self.root,self.curr_goal.get_loc())
+			curr_partial = reversed(self.root.get_path(self.root,self.my_position.get_loc()))
 
 			self.oof_path = []
-			self.root.get_path(self.curr_goal)
-			from_root = self.curr_goal.path_to_me
-			to_root = self.my_position.path_to_me
-			# by convention I do not have the goals include themselves.
-			# so I add them here:
-			from_root.append([self.curr_goal.x,self.curr_goal.y])
-			# now reverse to_root
-			for e in from_root:
-				self.oof_path.append(e)
+			for step in curr_partial:
+				self.oof_path.append(step)
+			for step in root_partial:
+				if not (self.oof_path[len(self.oof_path)-1][0] == step[0] and self.oof_path[len(self.oof_path)-1][1] == step[1]):
+					self.oof_path.append(step)
 
-
-			#  TODO update this
-			# self.oof_path = []
-			# for x in range(len(self.my_position.path_to_me),0):
-			# 	logthis("x: " + str(x))
-			# 	self.oof_path.append(self.my_position.path_to_me[x])
-			# for n in self.curr_goal.path_to_me:
-			# 	if n not in self.oof_path:
-			# 		self.oof_path.append(n)
 
 			p_str = "Path: "
 			logthis("Path Len: " + str(len(self.oof_path)))
