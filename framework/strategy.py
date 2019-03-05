@@ -76,8 +76,8 @@ def get_centroid(set):
 	for coord in set:
 		x_total = x_total + coord[0]
 		y_total = y_total + coord[1]
-	x_center = x_total/4
-	y_center = y_total/4
+	x_center = x_total/len(set)
+	y_center = y_total/len(set)
 	return [int(x_center),int(y_center)]
 
 #
@@ -292,12 +292,24 @@ class Node(object):
 		return [self.x,self.y]
 
 	def get_leaves(self, stack):
-		if not self.explored:
-			stack.append(self)
-		else:
-			for c in self.get_children():
-				c.get_leaves(stack)
-		return stack
+		leaf_set = []
+		stack = []
+		stack.append(self)
+		while (len(stack) > 0):
+			curr = stack.pop()
+			if not (curr.explored):
+				leaf_set.append(curr)
+			else:
+				for c in curr.get_children():
+					stack.append(c)
+		return leaf_set
+		# return None
+		# if not self.explored:
+		# 	stack.append(self)
+		# else:
+		# 	for c in self.get_children():
+		# 		c.get_leaves(stack)
+		# return stack
 
 	def get_path(self, root, goal):
 		if not root:
@@ -591,6 +603,7 @@ class Rendezvous(Strategy):
 		self.root.x 	  = self.mouse.x
 		self.root.y 	  = self.mouse.y
 		self.root.path_to_me.append(self.root.get_loc())
+		self.curr_leaves = []
 		# self.root = self.my_position
 		# logthis("init successful!")
 
@@ -626,53 +639,83 @@ class Rendezvous(Strategy):
 			# left case
 			if (self.mouse.canGoLeft() and (self.root.get_node([loc[0]-1,loc[1]],None)) is None ) :
 				self.root.insert_left(self.my_position)
+				self.curr_leaves.append([loc[0]-1,loc[1]])
 			if (self.mouse.canGoRight() and (self.root.get_node([loc[0]+1,loc[1]],None)) is None ) :
 				self.root.insert_right(self.my_position)
+				self.curr_leaves.append([loc[0]+1,loc[1]])
 			if (self.mouse.canGoDown() and (self.root.get_node([loc[0],loc[1]+1],None)) is None ) :
 				self.root.insert_down(self.my_position)
+				self.curr_leaves.append([loc[0],loc[1]+1])
 			if (self.mouse.canGoUp() and (self.root.get_node([loc[0],loc[1]-1],None)) is None ) :
 				self.root.insert_up(self.my_position)
+				self.curr_leaves.append([loc[0],loc[1]-1])
+			self.root.get_node(self.my_position.get_loc(),None).explored = True
 			self.my_position.explored = True
 
-		logthis("=> full graph contains:")
-		self.root.print_all()
+		# logthis("=> full graph contains:")
+		# self.root.print_all()
 		# if we don't have a goal, get one!
-		if not self.has_goal:
+		if (not self.has_goal) and (not self.at_goal):
 			locations = get_all_xy()
-			self.center = get_centroid(locations)
-			leaves = self.root.get_leaves([])
-
-			# for leaf in leaves:
-			# 	logthis("leaf: " + str(leaf.x) + ", " + str(leaf.y))
-
+			temp_oof = []
+			for p in locations:
+				if not (p[0] == self.my_position.x and p[1] == self.my_position.y):
+					temp_oof.append(p)
+			self.center = get_centroid(temp_oof)
 
 			h_val = 999999
-			for leaf in leaves:
-				# logthis("leaf: " + str(leaf.x) + ", " + str(leaf.y))
-				t_loc = [leaf.x,leaf.y]
+			# for leaf in leaves:
+			for leaf in self.curr_leaves:
+				logthis("leaf: " + str(leaf[0]) + ", " + str(leaf[1]))
+				# t_loc = [leaf.x,leaf.y]
 				# logthis(t_loc)
-				if (heuristic_dist(t_loc,self.center) < h_val):
+				if (heuristic_dist(leaf,self.center) < h_val):
 					# logthis("=> attempt 4:")
 					# self.root.print_all()
-					self.curr_goal = self.root.get_node(t_loc,None)
+					self.curr_goal = self.root.get_node(leaf,None)
 					# logthis(">> " + str(self.curr_goal))
 					# logthis(">> " + str(self.root.get_node(t_loc,None)))
 					# logthis("wait: " + str(self.root.get_node(t_loc,None).x) + ", " +str(self.root.get_node(t_loc,None).y))
 					# logthis("Goal: " + str(self.curr_goal.x) + ", " +str(self.curr_goal.y))
-					h_val = heuristic_dist(t_loc,self.center)
+					h_val = heuristic_dist(leaf,self.center)
 			self.has_goal = True
 			logthis("Goal: " + str(self.curr_goal.x) + ", " +str(self.curr_goal.y))
 
-			root_partial = self.root.get_path(self.root,self.curr_goal.get_loc())
-			curr_partial = reversed(self.root.get_path(self.root,self.my_position.get_loc()))
+			curr_to_goal = self.root.get_path(self.root,self.curr_goal.get_loc()) # includes full path from root
+			# temp_path = self.root.get_path(self.root,self.my_position.get_loc())
+			curr_to_root = self.root.get_path(self.root,self.my_position.get_loc())
+			# reverse the path
+			root_to_goal = []
+			for r in reversed(curr_to_goal):
+				root_to_goal.append(r)
+
+			# before we set the path... let's just see if the centroid is
+			# in our spanning tree...
+			# if so go there
+			# if self.root.get_node(self.center,None) is not None:
+			# 	self.curr_goal.x = self.center[0]
+			# 	self.curr_goal.y = self.center[1]
 
 			self.oof_path = []
-			for step in curr_partial:
-				self.oof_path.append(step)
-			for step in root_partial:
-				if not (self.oof_path[len(self.oof_path)-1][0] == step[0] and self.oof_path[len(self.oof_path)-1][1] == step[1]):
-					self.oof_path.append(step)
+			if (self.my_position.x == self.root.x and self.my_position.y == self.my_position.y):
+				self.oof_path = root_to_goal
+			else:
+				on_path = False
+				path_loc = 0
+				sub_path = []
+				for x in range(0,len(curr_to_goal)):
+					if (curr_to_goal[x][0] == self.my_position.x and curr_to_goal[x][1] == self.my_position.y):
+						on_path = True
+						path_loc = x
+					# now fill
+					if on_path:
+						sub_path.append(curr_to_goal[x])
 
+				if on_path:
+					self.oof_path = sub_path
+				else:
+					self.oof_path = curr_to_root
+					self.curr_goal = self.root
 
 			p_str = "Path: "
 			logthis("Path Len: " + str(len(self.oof_path)))
@@ -681,34 +724,66 @@ class Rendezvous(Strategy):
 			logthis(p_str)
 
 		# find the path to the goal
-		if self.has_goal:
+		if self.has_goal and not self.at_goal:
 			next_node = self.oof_path.pop()
+			logthis("next move: " + str(next_node))
 			if (next_node[0] == self.curr_goal.x and next_node[1] == self.curr_goal.y):
 				self.has_goal = False
+				# TODO centroid check
 			# find the way to move
-			if (next_node[0] == self.my_position.x + 1):
+			if (next_node[0] == self.my_position.x + 1 and self.mouse.canGoRight() and not self.at_goal):
 				self.my_position = self.root.get_node(loc,None)
 				self.my_position = self.my_position.right
+				try:
+					self.curr_leaves.remove(next_node)
+				except Exception:
+					print("python2.7 is bae")
 				self.mouse.goRight()
 				logthis("go Right")
-			elif (next_node[0] == self.my_position.x - 1):
+			elif (next_node[0] == self.my_position.x - 1 and self.mouse.canGoLeft() and not self.at_goal):
 				self.my_position = self.root.get_node(loc,None)
 				self.my_position = self.my_position.left
+				try:
+					self.curr_leaves.remove(next_node)
+				except Exception:
+					print("python2.7 is bae")
 				self.mouse.goLeft()
 				logthis("go Left")
-			elif (next_node[1] == self.my_position.y + 1):
+			elif (next_node[1] == self.my_position.y + 1 and self.mouse.canGoDown() and not self.at_goal):
 				# redo the grab
 				self.my_position = self.root.get_node(loc,None)
 				self.my_position = self.my_position.down
+				try:
+					self.curr_leaves.remove(next_node)
+				except Exception:
+					print("python2.7 is bae")
 				self.mouse.goDown()
 				logthis("go Down")
-			elif (next_node[1] == self.my_position.y - 1):
+			elif (next_node[1] == self.my_position.y - 1 and self.mouse.canGoUp() and not self.at_goal):
 				self.my_position = self.root.get_node(loc,None)
 				self.my_position = self.my_position.up
+				try:
+					self.curr_leaves.remove(next_node)
+				except Exception:
+					print("python2.7 is bae")
 				self.mouse.goUp()
 				logthis("go Up")
 
-		sleep(0.5)
+			sleep(0.3)
+			check_loc = get_all_xy()
+			yee_list = []
+			for f in check_loc:
+				if (next_node[0] == f[0] and next_node[1] == f[1]):
+					print("yee")
+				else:
+					yee_list.append(f)
+			if len(yee_list) < 3: #we've run into someone else
+				self.at_goal = True
+
+			if not self.has_goal:
+				self.oof_path = []
+
+		sleep(0.1)
 
 class Rendezvous5(Strategy):
 	mouse = None
