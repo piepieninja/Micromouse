@@ -188,6 +188,7 @@ class Node(object):
 		self.explored = False
 		self.x = None
 		self.y = None
+		self.path_to_me = [] # from root
 
 	def get_children(self):
 		ret_boi = []
@@ -201,57 +202,117 @@ class Node(object):
 			ret_boi.append(self.right)
 		return ret_boi
 
-	def get_node(self, n, loc):
+	def get_node(self,loc,ret_node):
 		# self should be root
-		if (n.x == loc[0] and n.y == loc[1]):
-			return n
-		else:
-			for c in n.get_children():
-				# logthis("node: " + str(n.x) + ", " + str(n.y))
-				self.get_node(c,loc)
+		stack = []
+		stack.append(self)
+		while (len(stack) > 0):
+			curr = stack.pop()
+			if (curr.x == loc[0] and curr.y == loc[1]):
+				return curr
+			else:
+				for c in curr.get_children():
+					stack.append(c)
 		return None
+		# logthis("x: " + str(loc[0]) + ", y: " + str(loc[1]))
+		# logthis("{" + str(self.x) + ", " + str(self.y) + "}")
+		# if (self.x == loc[0] and self.y == loc[1]):
+		# 	return self
+		# else:
+		# 	for c in self.get_children():
+		# 		# logthis("node: " + str(n.x) + ", " + str(n.y))
+		# 		# logthis("trying to get: " + str(loc[0]) + ", " + str(loc[1]))
+		# 		c.get_node(loc,None)
+		# return ret_node
 
 	# insert right from the location loc
-	def insert_right(self, old_guy, new_guy):
+	def insert_right(self, old_guy):
 		# self should be root
 		logthis("insert_right")
 		new_guy = Node()
-		oof = self.get_node(self,[old_guy.x,old_guy.y])
+		# logthis("old_guy: " + str(old_guy.x) + ", " + str(old_guy.y))
+		oof = self.get_node([old_guy.x,old_guy.y],None)
+		# logthis("oof: " + str(old_guy.x) + ", " + str(old_guy.y))
 		new_guy.x = oof.x + 1
 		new_guy.y = oof.y
+		# new_guy.path_to_me = oof.path_to_me
+		# new_guy.path_to_me.append(new_guy.get_loc())
 		oof.right = new_guy
 		# new_guy.left = oof
 		# insert a node to the right
 
-	def insert_left(self, old_guy, new_guy):
+	def insert_left(self, old_guy):
 		# self should be root
 		logthis("insert_left")
 		new_guy = Node()
-		oof = self.get_node(self,[old_guy.x,old_guy.y])
+		# logthis("old_guy: " + str(old_guy.x) + ", " + str(old_guy.y))
+		oof = self.get_node([old_guy.x,old_guy.y],None)
+		# logthis("oof: " + str(old_guy.x) + ", " + str(old_guy.y))
 		new_guy.x = oof.x - 1
 		new_guy.y = oof.y
+		# new_guy.path_to_me = oof.path_to_me
+		# new_guy.path_to_me.append(new_guy.get_loc())
 		oof.left = new_guy
 		# new_guy.right = oof
 
-	def insert_down(self, old_guy, new_guy):
+	def insert_down(self, old_guy):
 		# self should be root
 		logthis("insert_down")
 		new_guy = Node()
-		oof = self.get_node(self,[old_guy.x,old_guy.y])
+		# logthis("old_guy: " + str(old_guy.x) + ", " + str(old_guy.y))
+		oof = self.get_node([old_guy.x,old_guy.y],None)
+		# logthis("oof: " + str(old_guy.x) + ", " + str(old_guy.y))
 		new_guy.x = oof.x
 		new_guy.y = oof.y + 1
+		# new_guy.path_to_me = oof.path_to_me
+		# new_guy.path_to_me.append(new_guy.get_loc())
 		oof.down = new_guy
-		# new_guy.up = oof
 
-	def insert_up(self, old_guy, new_guy):
+	def insert_up(self, old_guy):
 		# self should be root
 		logthis("insert_up")
 		new_guy = Node()
-		oof = self.get_node(self,[old_guy.x,old_guy.y])
+		# logthis("old_guy: " + str(old_guy.x) + ", " + str(old_guy.y))
+		oof = self.get_node([old_guy.x,old_guy.y],None)
+		# logthis("oof: " + str(old_guy.x) + ", " + str(old_guy.y))
 		new_guy.x = oof.x
 		new_guy.y = oof.y - 1
+		# new_guy.path_to_me = oof.path_to_me
+		# new_guy.path_to_me.append(new_guy.get_loc())
 		oof.up = new_guy
 		# new_guy.down = oof
+
+	def print_all(self):
+		logthis("[" + str(self.x) + ", " + str(self.y) + "]")
+		for c in self.get_children():
+			c.print_all()
+			# logthis("[" + str(c.x) + ", " + str(c.y) + "]")
+
+	def get_loc(self):
+		return [self.x,self.y]
+
+	def get_leaves(self, stack):
+		if not self.explored:
+			stack.append(self)
+		else:
+			for c in self.get_children():
+				c.get_leaves(stack)
+		return stack
+
+	def get_path(self, goal):
+		stack = []
+		stack.append(self)
+		while (len(stack) > 0):
+			parent = stack.pop()
+			if (parent.x == goal.x and parent.y == goal.y):
+				# stack.append(parent)
+				parent.path_to_me.append([parent.x,parent.y])
+				return stack
+			for c in parent.get_children():
+				c.path_to_me.append([parent.x,parent.y])
+				c.get_children()
+		return stack
+
 
 #
 # Finds the node n, or returns None
@@ -298,20 +359,28 @@ def getLeaves(n, stack):
 	return stack
 
 #
+# helper function for getPath
+#
+def not_in(boi,path):
+	for yeet in path:
+		if (yeet.x == boi.x and yeet.y == boi.y):
+			return False
+	return True
+
+#
 # get path to goal
 #
 def getPathToGoal(n, goal, path):
-	if not n:
-		return []
-	if (n.x == goal.x and n.y == goal.y):
-		path.append(n)
-		return path
+	# this one sort of worked:
 	path.append(n)
-	getPathToGoal(n.left, goal, path)
-	getPathToGoal(n.right, goal, path)
-	getPathToGoal(n.up, goal, path)
-	getPathToGoal(n.down, goal, path)
-	return path
+	if (n.x == goal.x and n.y == goal.y):
+		return path
+	for boi in n.get_children():
+		if not_in(boi,path):
+			temp_path = getPathToGoal(boi,goal,path)
+			if temp_path:
+				return temp_path
+	return None
 
 
 class StrategyTestProgress(Strategy):
@@ -502,6 +571,7 @@ class Rendezvous(Strategy):
 	curr_leaves = []
 	center = [0,0]
 	root = Node()
+	seen = []
 
 
 	def __init__(self, mouse):
@@ -515,6 +585,7 @@ class Rendezvous(Strategy):
 		self.root.explored = False
 		self.root.x 	  = self.mouse.x
 		self.root.y 	  = self.mouse.y
+		self.root.path_to_me.append(self.root.get_loc())
 		# self.root = self.my_position
 		# logthis("init successful!")
 
@@ -525,17 +596,22 @@ class Rendezvous(Strategy):
 
 		logthis("<======>")
 
+		# self.root.print_all()
+
 		# sense the walls
 		self.mouse.senseWalls()
 
 		# the location in an cleaner format
 		loc = [self.mouse.x,self.mouse.y]
-		logthis("expected loc: " + str(loc[0]) + ", " + str(loc[1]))
-		logthis("root: " + str(self.root.x) + ", " + str(self.root.y))
+		# logthis("expected loc: " + str(loc[0]) + ", " + str(loc[1]))
+		# logthis("root: " + str(self.root.x) + ", " + str(self.root.y))
 
 		# get the node we're at
-		self.my_position = self.root.get_node(self.root, loc)
+		self.my_position = self.root.get_node(loc,None)
 		logthis("pos: " + str(self.my_position.x) + "," + str(self.my_position.y))
+
+		# logthis("=> attempt 2:")
+		# self.root.print_all()
 
 		# see if we need to explore
 		if (not self.my_position.explored):
@@ -543,86 +619,104 @@ class Rendezvous(Strategy):
 			# we must check if there is already an entry in the tree
 			# so that we avoid cycles
 			# left case
-			if (self.mouse.canGoLeft() and not containsNode(self.root,[loc[0]-1,loc[1]])):
-				newguy = Node()
-				self.root.insert_left(self.my_position,newguy)
-			else:
-				self.my_position.left = None
-			# right case
-			if (self.mouse.canGoRight() and not containsNode(self.root,[loc[0]+1,loc[1]])):
-				newguy = Node()
-				self.root.insert_right(self.my_position,newguy)
-			else:
-				self.my_position.right = None
-			# down case
-			if (self.mouse.canGoDown() and not containsNode(self.root,[loc[0],loc[1]+1])):
-				newguy = Node()
-				self.root.insert_down(self.my_position,newguy)
-			else:
-				self.my_position.down = None
-			# up case
-			if (self.mouse.canGoUp() and not containsNode(self.root,[loc[0],loc[1]-1])):
-				newguy = Node()
-				self.root.insert_up(self.my_position,newguy)
-			else:
-				self.my_position.up = None
-			# we did it boiz
+			if (self.mouse.canGoLeft() and (self.root.get_node([loc[0]-1,loc[1]],None)) is None ) :
+				self.root.insert_left(self.my_position)
+			if (self.mouse.canGoRight() and (self.root.get_node([loc[0]+1,loc[1]],None)) is None ) :
+				self.root.insert_right(self.my_position)
+			if (self.mouse.canGoDown() and (self.root.get_node([loc[0],loc[1]+1],None)) is None ) :
+				self.root.insert_down(self.my_position)
+			if (self.mouse.canGoUp() and (self.root.get_node([loc[0],loc[1]-1],None)) is None ) :
+				self.root.insert_up(self.my_position)
 			self.my_position.explored = True
 
-		# this should only happen the first time, and should connect everything:
-		# if (not self.root.explored):
-		# 	self.root.right = self.my_position.right
-		# 	self.root.left = self.my_position.left
-		# 	self.root.up = self.my_position.up
-		# 	self.root.down = self.my_position.down
-
+		logthis("=> full graph contains:")
+		self.root.print_all()
 		# if we don't have a goal, get one!
 		if not self.has_goal:
 			locations = get_all_xy()
 			self.center = get_centroid(locations)
-			leaves = getLeaves(self.root,[])
+			leaves = self.root.get_leaves([])
+
+			# for leaf in leaves:
+			# 	logthis("leaf: " + str(leaf.x) + ", " + str(leaf.y))
+
+
 			h_val = 999999
 			for leaf in leaves:
-				logthis("leaf: " + str(leaf.x) + ", " + str(leaf.y))
+				# logthis("leaf: " + str(leaf.x) + ", " + str(leaf.y))
 				t_loc = [leaf.x,leaf.y]
+				# logthis(t_loc)
 				if (heuristic_dist(t_loc,self.center) < h_val):
-					self.curr_goal = leaf
+					# logthis("=> attempt 4:")
+					# self.root.print_all()
+					self.curr_goal = self.root.get_node(t_loc,None)
+					# logthis(">> " + str(self.curr_goal))
+					# logthis(">> " + str(self.root.get_node(t_loc,None)))
+					# logthis("wait: " + str(self.root.get_node(t_loc,None).x) + ", " +str(self.root.get_node(t_loc,None).y))
+					# logthis("Goal: " + str(self.curr_goal.x) + ", " +str(self.curr_goal.y))
 					h_val = heuristic_dist(t_loc,self.center)
 			self.has_goal = True
 			logthis("Goal: " + str(self.curr_goal.x) + ", " +str(self.curr_goal.y))
 			# now get the path to that goal!
 
+			logthis("curr path: ")
+			for node in self.curr_goal.path_to_me:
+				p_str += str(node[0]) + ", " + str(node[1]) + " -> "
+
+			self.oof_path = []
+			self.root.get_path(self.curr_goal)
+			from_root = self.curr_goal.path_to_me
+			to_root = self.my_position.path_to_me
+			# by convention I do not have the goals include themselves.
+			# so I add them here:
+			from_root.append([self.curr_goal.x,self.curr_goal.y])
+			# now reverse to_root
+			for e in from_root:
+				self.oof_path.append(e)
+
+
 			#  TODO update this
-			self.oof_path = getPathToGoal(self.root.get_node(self.root,[self.my_position.x,self.my_position.y]),self.curr_goal,[])
+			# self.oof_path = []
+			# for x in range(len(self.my_position.path_to_me),0):
+			# 	logthis("x: " + str(x))
+			# 	self.oof_path.append(self.my_position.path_to_me[x])
+			# for n in self.curr_goal.path_to_me:
+			# 	if n not in self.oof_path:
+			# 		self.oof_path.append(n)
 
 			p_str = "Path: "
 			logthis("Path Len: " + str(len(self.oof_path)))
 			for node in self.oof_path:
-				p_str += str(node.x) + ", " + str(node.y) + " -> "
+				p_str += str(node[0]) + ", " + str(node[1]) + " -> "
 			logthis(p_str)
 
 		# find the path to the goal
 		if self.has_goal:
 			next_node = self.oof_path.pop()
-			if (next_node.x == self.curr_goal.x and next_node.y == self.curr_goal.y):
+			if (next_node[0] == self.curr_goal.x and next_node[1] == self.curr_goal.y):
 				self.has_goal = False
 			# find the way to move
-			if (next_node.x == self.my_position.x + 1):
+			if (next_node[0] == self.my_position.x + 1):
+				self.my_position = self.root.get_node(loc,None)
+				self.my_position = self.my_position.right
 				self.mouse.goRight()
-			elif (next_node.x == self.my_position.x - 1):
+				logthis("go Right")
+			elif (next_node[0] == self.my_position.x - 1):
+				self.my_position = self.root.get_node(loc,None)
+				self.my_position = self.my_position.left
 				self.mouse.goLeft()
-			elif (next_node.y == self.my_position.y + 1):
+				logthis("go Left")
+			elif (next_node[1] == self.my_position.y + 1):
+				# redo the grab
+				self.my_position = self.root.get_node(loc,None)
+				self.my_position = self.my_position.down
 				self.mouse.goDown()
-			elif (next_node.y == self.my_position.y - 1):
+				logthis("go Down")
+			elif (next_node[1] == self.my_position.y - 1):
+				self.my_position = self.root.get_node(loc,None)
+				self.my_position = self.my_position.up
 				self.mouse.goUp()
-
-
-			self.my_position = self.root.get_node(self.root,[next_node.x,next_node.y])
-			# logthis("Next: " + str(next_node.x) + ", " + str(next_node.y) + " | pos: " + str(self.my_position.x) + ", " + str(self.my_position.y))
-			logthis("Next: " + str(next_node.x) + ", " + str(next_node.y))
-			# self.my_position = self.root.get_node(self.root,[self.my_position.x,self.my_position.y])
-		# self.center = get_centroid(locations)
-
+				logthis("go Up")
 
 		sleep(0.5)
 
